@@ -2,7 +2,8 @@
 
 Each token is checked with getMe first. One that Telegram refuses (revoked, mistyped) is
 reported by its position in BOT_TOKENS and skipped, so one bad token never stops the others.
-Then, with SET_PROFILE on, each bot's description and about text are written (only when they
+A webhook left from where a bot ran before is removed, so polling gets its messages. Then,
+with SET_PROFILE on, each bot's description and about text are written (only when they
 differ), and all of them are polled by one dispatcher. No webhook, so the service needs no
 public address.
 """
@@ -68,6 +69,12 @@ async def start(config: Config) -> None:
             continue
         usernames[me.id] = me.username or str(me.id)
         bots.append(bot)
+        #  A bot that ran somewhere else may still have a webhook set; polling cannot get its
+        #  messages until it is removed. Messages already waiting are kept and answered.
+        try:
+            await bot.delete_webhook(drop_pending_updates=False)
+        except TelegramAPIError as exc:
+            log.warning("webhook not removed for @%s: %s", me.username, type(exc).__name__)
         if config.set_profile:
             await _profile(bot, config)
     if not bots:
