@@ -87,7 +87,8 @@ async def start(config: Config) -> None:
     #  The owner's panel first, so /admin and a message being composed never get the welcome.
     dispatcher.include_router(build_admin_router(config, store, usernames, broadcaster))
     dispatcher.include_router(build_router(config, store, usernames))
-    await dispatcher.start_polling(*bots, allowed_updates=["message"])
+    #  Exactly what the routers handle: messages and, for the panel's buttons, callback queries.
+    await dispatcher.start_polling(*bots, allowed_updates=dispatcher.resolve_used_update_types())
 
 
 def main() -> None:

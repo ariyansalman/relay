@@ -282,6 +282,11 @@ async def test_only_the_owner_opens_the_panel(relay):
     assert "in memory" in panel, "the panel says when the list will not outlive a restart"
 
 
+async def test_polling_asks_telegram_for_the_panels_button_taps(relay):
+    dispatcher, *_ = relay
+    assert set(dispatcher.resolve_used_update_types()) == {"message", "callback_query"}
+
+
 async def test_the_people_list_pages_and_exports(relay):
     dispatcher, bot, session, _ = relay
     for user_id in range(100, 113):
