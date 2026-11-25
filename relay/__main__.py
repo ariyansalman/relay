@@ -92,7 +92,10 @@ async def start(config: Config) -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    #  stdout: Railway marks everything on stderr as an error, normal lines included.
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout
+    )
     #  aiogram logs every update at INFO; the relay's own lines are what matter.
     logging.getLogger("aiogram.event").setLevel(logging.WARNING)
     try:
