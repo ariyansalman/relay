@@ -52,7 +52,7 @@ changing a dependency). Tests: `pytest`.
 
 ## বাংলায়: চালু করার ধাপ
 
-1. Railway → আপনার প্রজেক্ট → **New → GitHub Repo → ariyansalman/relay**। নতুন service তৈরি হবে।
+1. Railway → **New Project** (দোকানের প্রজেক্ট থেকে আলাদা) → **GitHub Repo → ariyansalman/relay**। চাইলে একই প্রজেক্টে **New → Database → Redis** যোগ করে `REDIS_URL` দিন।
 2. সেই service → **Variables**:
    - `BOT_TOKENS` = সব বটের token, কমা দিয়ে (BotFather থেকে)
    - `MAIN_BOT` = `TroveShopBot`
