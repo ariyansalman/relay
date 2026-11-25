@@ -2,9 +2,10 @@
 
   BOT_TOKENS     the bots' tokens from BotFather, separated by commas, spaces or new lines
   MAIN_BOT       the store's bot, the one every relay bot points to (TroveShopBot)
-  OWNER_IDS      Telegram user ids allowed to send /stats, separated by commas
+  OWNER_IDS      Telegram user ids allowed to open /admin, separated by commas
   STORE_NAME     the store's name as the welcome message says it (DigiVault)
-  REDIS_URL      optional: keeps the start counts across restarts; without it they live in memory
+  DATA_DIR       optional, /data by default: where the people list (SQLite) is kept; on Railway a
+                 volume mounted there keeps it across deploys
   SET_PROFILE    optional, "true" by default: write each bot's description and about text
   CAMPAIGN       optional, "true" by default: link with the bot's own campaign code (c_<slug>)
   WELCOME_PHOTO  optional: the banner above the welcome. Empty: the store's banner in
@@ -66,10 +67,10 @@ class Config:
     main_bot: str
     owner_ids: frozenset[int]
     store_name: str
-    redis_url: str | None
     set_profile: bool
     campaign: bool
     welcome_photo: str | None = str(BANNER)
+    data_dir: str = "/data"
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> Config:
@@ -85,8 +86,8 @@ class Config:
             main_bot=main_bot,
             owner_ids=parse_ids(env.get("OWNER_IDS")),
             store_name=(env.get("STORE_NAME") or "DigiVault").strip()[:40] or "DigiVault",
-            redis_url=(env.get("REDIS_URL") or "").strip() or None,
             set_profile=_flag(env.get("SET_PROFILE"), True),
             campaign=_flag(env.get("CAMPAIGN"), True),
             welcome_photo=parse_photo(env.get("WELCOME_PHOTO")),
+            data_dir=(env.get("DATA_DIR") or "/data").strip() or "/data",
         )

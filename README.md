@@ -17,10 +17,10 @@ people who opened it.
 |---|---|---|
 | `BOT_TOKENS` | yes | The bots' tokens from BotFather, separated by commas |
 | `MAIN_BOT` | yes | The store bot's username, without @ (`TroveShopBot`) |
-| `OWNER_IDS` | for `/stats` | Telegram user ids allowed to send `/stats`, comma separated |
+| `OWNER_IDS` | for `/admin` | Telegram user ids allowed to open `/admin`, comma separated |
 | `STORE_NAME` | no | The store's name in the welcome (`DigiVault`) |
 | `WELCOME_PHOTO` | no | Empty: the banner in `relay/assets/banner.jpg`. A picture's link to use another. `off`: text only |
-| `REDIS_URL` | no | Keeps the start counts across restarts; without it they reset on each deploy |
+| `DATA_DIR` | no | `/data` (default): where the people list is kept. Mount a Railway volume there, or the list empties on each deploy |
 | `SET_PROFILE` | no | `true` (default): write each bot's description and about text at start |
 | `CAMPAIGN` | no | `true` (default): link with `?start=c_<bot username>` |
 
@@ -36,7 +36,20 @@ campaign named after the bot, so for each relay bot: store admin → Statistics 
 New, and name it exactly as the bot's username. Without a matching campaign the link still
 opens the store; the person is simply not counted to that bot.
 
-`/stats`, sent by an owner to any relay bot, lists every bot with how many people started it.
+## The owner's panel
+
+`/admin` (or `/stats`), sent by an owner to any relay bot:
+
+- **👥 People**: everyone who wrote to a relay bot, latest first, ten to a page.
+- **🤖 Bots**: each bot's people, new this week, and how many blocked it.
+- **📄 Export**: the whole list as a `.csv` file.
+- **📢 Broadcast**: to every bot's people, or one bot's. Send text, a photo, a video, a GIF or a
+  file; check how it looks; send it with the store button or as it is. Each person gets it
+  once, from the bot they wrote to last; people who blocked a bot are left out and marked.
+  About 20 messages a second, and a running count while it goes.
+
+The list is kept in SQLite under `DATA_DIR`. Without a volume there it is kept in memory and
+the panel says so.
 
 ## Running
 
@@ -52,11 +65,11 @@ changing a dependency). Tests: `pytest`.
 
 ## বাংলায়: চালু করার ধাপ
 
-1. Railway → **New Project** (দোকানের প্রজেক্ট থেকে আলাদা) → **GitHub Repo → ariyansalman/relay**। চাইলে একই প্রজেক্টে **New → Database → Redis** যোগ করে `REDIS_URL` দিন।
+1. Railway → **New Project** (দোকানের প্রজেক্ট থেকে আলাদা) → **GitHub Repo → ariyansalman/relay**। service-এ একটা **Volume** যোগ করুন, mount path `/data`, যাতে user list deploy-এর পরেও থাকে।
 2. সেই service → **Variables**:
    - `BOT_TOKENS` = সব বটের token, কমা দিয়ে (BotFather থেকে)
    - `MAIN_BOT` = `TroveShopBot`
-   - `OWNER_IDS` = আপনার Telegram ID (শুধু আপনি `/stats` দেখতে পারবেন)
+   - `OWNER_IDS` = আপনার Telegram ID (শুধু আপনি `/admin` খুলতে পারবেন: user দেখা, export, broadcast)
 3. Save করলে service নিজে চালু হবে। Deploy log-এ লেখা আসবে "relaying N bots to @TroveShopBot"।
 4. প্রতিটা বট যেন Trove-এর হিসাবে আসে: Trove Admin → Statistics → Campaign links → New, নাম দিন
    বটের username হুবহু (যেমন `Premium_Accounts_Bot`)।

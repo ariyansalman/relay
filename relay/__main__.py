@@ -4,8 +4,8 @@ Each token is checked with getMe first. One that Telegram refuses (revoked, mist
 reported by its position in BOT_TOKENS and skipped, so one bad token never stops the others.
 A webhook left from where a bot ran before is removed, so polling gets its messages. Then,
 with SET_PROFILE on, each bot's description and about text are written (only when they
-differ), and all of them are polled by one dispatcher. No webhook, so the service needs no
-public address.
+differ), and all of them are polled by one dispatcher, the owner's /admin panel first. No
+webhook, so the service needs no public address.
 """
 
 from __future__ import annotations
@@ -13,15 +13,17 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
+from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.exceptions import TelegramAPIError, TelegramUnauthorizedError
 
 from relay import texts
+from relay.admin import Broadcaster, build_admin_router
 from relay.config import Config, ConfigError
 from relay.handlers import build_router
-from relay.stats import MemoryStats, RedisStats, Stats
+from relay.store import Store
 
 log = logging.getLogger("relay")
 
@@ -38,16 +40,6 @@ async def _profile(bot: Bot, config: Config) -> None:
     except TelegramAPIError as exc:
         #  Telegram limits how often these may be changed; the next start tries again.
         log.warning("profile not written for a bot: %s", type(exc).__name__)
-
-
-async def _stats(config: Config) -> Stats:
-    if not config.redis_url:
-        return MemoryStats()
-    from redis.asyncio import Redis
-
-    stats = RedisStats(Redis.from_url(config.redis_url, socket_timeout=2, socket_connect_timeout=2))
-    await stats.load()
-    return stats
 
 
 async def start(config: Config) -> None:
@@ -86,8 +78,15 @@ async def start(config: Config) -> None:
         config.main_bot,
         ", ".join(f"@{name}" for name in sorted(usernames.values(), key=str.lower)),
     )
+    store = Store(Path(config.data_dir) / "relay.sqlite3")
+    if store.lasting:
+        log.info("people list: %s, %d people", store.path, store.summary().people)
+    by_name = {usernames[bot.id].lower(): bot for bot in bots}
+    broadcaster = Broadcaster(config, store, by_name)
     dispatcher = Dispatcher()
-    dispatcher.include_router(build_router(config, await _stats(config), usernames))
+    #  The owner's panel first, so /admin and a message being composed never get the welcome.
+    dispatcher.include_router(build_admin_router(config, store, usernames, broadcaster))
+    dispatcher.include_router(build_router(config, store, usernames))
     await dispatcher.start_polling(*bots, allowed_updates=["message"])
 
 

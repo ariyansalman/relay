@@ -174,10 +174,6 @@ DESCRIPTION = (
 )
 SHORT_DESCRIPTION = "Part of {store}: premium accounts and digital products. Press Start."
 
-STATS_HEAD = "📊 <b>Relay bots</b> · since {since}"
-STATS_ROW = "@{bot}: <b>{people}</b> people, {starts} starts"
-STATS_TOTAL = "\nTotal: <b>{people}</b> people, {starts} starts"
-
 
 def language_of(code: str | None) -> str:
     """ "pt-BR" -> "pt"; anything unknown -> "en"."""

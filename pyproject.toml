@@ -5,7 +5,6 @@ description = "Telegram bots that send whoever starts them to the store bot."
 requires-python = ">=3.12"
 dependencies = [
   "aiogram==3.31.0",
-  "redis==5.2.1",
 ]
 
 [tool.setuptools.packages.find]

@@ -1,4 +1,5 @@
-"""What a relay bot does with a message: the welcome and the button, or /stats for the owner.
+"""What a relay bot does with a message: the welcome and the button. The owner's /admin is
+in relay/admin.py, whose router comes first.
 
 The welcome is the banner with the words as its caption. The banner is uploaded once per bot
 (Telegram's file ids belong to the bot that uploaded them) and sent by id after that. When a
@@ -23,7 +24,7 @@ from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarku
 
 from relay import texts
 from relay.config import Config
-from relay.stats import Stats
+from relay.store import Store
 
 #  The same rule the store uses to make a campaign code from a name (lower-case Latin letters,
 #  digits and hyphens, at most 40), so a campaign named after the bot gets this bot's code.
@@ -105,15 +106,24 @@ class Banner:
         self._broken.add(bot_id)
 
 
-def build_router(config: Config, stats: Stats, usernames: dict[int, str]) -> Router:
+def build_router(config: Config, store: Store, usernames: dict[int, str]) -> Router:
     """`usernames`: each relay bot's id -> its username, filled in at start."""
     router = Router(name="relay")
     quiet = Quiet()
     banner = Banner(config.welcome_photo)
 
-    async def count(username: str, user_id: int) -> None:
+    async def count(username: str, message: Message) -> None:
+        user = message.from_user
+        if user is None:
+            return
         try:
-            await stats.record(username, user_id)
+            await store.record(
+                username,
+                user.id,
+                first_name=user.full_name,
+                username=user.username or "",
+                language=user.language_code or "",
+            )
         except Exception as exc:  # a lost count must never stop a reply
             log.warning("start not counted: %s", type(exc).__name__)
 
@@ -132,25 +142,6 @@ def build_router(config: Config, stats: Stats, usernames: dict[int, str]) -> Rou
                 banner.failed(bot.id)
         await message.answer(words, reply_markup=markup)
 
-    @router.message(F.chat.type == "private", F.text.startswith("/stats"))
-    async def show_stats(message: Message, bot: Bot) -> None:
-        if message.from_user is None or message.from_user.id not in config.owner_ids:
-            await welcome(message, bot)
-            return
-        bots = sorted(usernames.values(), key=str.lower)
-        counts = await stats.counts(bots)
-        lines = [texts.STATS_HEAD.format(since=f"{stats.since:%d %b %Y %H:%M} UTC")]
-        lines += [
-            texts.STATS_ROW.format(bot=html.escape(c.bot), people=c.people, starts=c.starts)
-            for c in sorted(counts, key=lambda c: -c.people)
-        ]
-        lines.append(
-            texts.STATS_TOTAL.format(
-                people=sum(c.people for c in counts), starts=sum(c.starts for c in counts)
-            )
-        )
-        await message.answer("\n".join(lines))
-
     @router.message(F.chat.type == "private")
     async def welcome(message: Message, bot: Bot) -> None:
         if message.from_user is None or message.from_user.is_bot:
@@ -162,6 +153,6 @@ def build_router(config: Config, stats: Stats, usernames: dict[int, str]) -> Rou
         if quiet.allow(username, user_id, seconds=wait):
             #  The reply goes first; counting it never makes anyone wait.
             await send_welcome(message, bot, username)
-        await count(username, user_id)
+        await count(username, message)
 
     return router
