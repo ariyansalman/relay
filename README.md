@@ -2,10 +2,10 @@
 
 Telegram bots that send whoever starts them to the store bot.
 
-Each bot answers a `/start` (or any message, at most once a minute per person) with a short
-welcome in the reader's language — 15 languages — and one button that opens the store bot. The
-welcome says plainly that the bot is now part of the store; a relay bot never poses as anything
-else. Each bot links with its own campaign code, so the store's **Statistics → Campaign links**
+Each bot answers a `/start` (or any message, at most once a minute per person) with the store's
+banner and a short welcome under it in the reader's language — 15 languages — and one button
+that opens the store bot. The welcome says plainly that the bot is now part of the store; a relay
+bot never poses as anything else. Each bot links with its own campaign code, so the store's **Statistics → Campaign links**
 shows how many people each bot brought and how many of them bought.
 
 Only private chats are answered. Bots cannot message anyone first, so a relay bot speaks only to
@@ -18,7 +18,8 @@ people who opened it.
 | `BOT_TOKENS` | yes | The bots' tokens from BotFather, separated by commas |
 | `MAIN_BOT` | yes | The store bot's username, without @ (`TroveShopBot`) |
 | `OWNER_IDS` | for `/stats` | Telegram user ids allowed to send `/stats`, comma separated |
-| `STORE_NAME` | no | The store's name in the welcome (`Trove`) |
+| `STORE_NAME` | no | The store's name in the welcome (`DigiVault`) |
+| `WELCOME_PHOTO` | no | Empty: the banner in `relay/assets/banner.jpg`. A picture's link to use another. `off`: text only |
 | `REDIS_URL` | no | Keeps the start counts across restarts; without it they reset on each deploy |
 | `SET_PROFILE` | no | `true` (default): write each bot's description and about text at start |
 | `CAMPAIGN` | no | `true` (default): link with `?start=c_<bot username>` |
@@ -60,3 +61,4 @@ changing a dependency). Tests: `pytest`.
 4. প্রতিটা বট যেন Trove-এর হিসাবে আসে: Trove Admin → Statistics → Campaign links → New, নাম দিন
    বটের username হুবহু (যেমন `Premium_Accounts_Bot`)।
 5. নতুন বট যোগ করতে শুধু `BOT_TOKENS`-এ আরেকটা token কমা দিয়ে জুড়ে দিন।
+6. ব্যানার বদলাতে `relay/assets/banner.jpg` বদলে দিন, অথবা `WELCOME_PHOTO`-এ ছবির লিংক দিন। ছবি ছাড়া শুধু লেখা চাইলে `WELCOME_PHOTO` = `off`।

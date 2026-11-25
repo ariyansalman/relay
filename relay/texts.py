@@ -3,86 +3,148 @@
 Honest by design: every message says plainly that this bot is now part of the store and where
 the button goes. A relay bot never poses as anything else.
 
-{bot} is the relay bot's own username, {store} the store's name. Both are plain text.
+{bot} is the relay bot's own username, {store} the store's name. Both are plain text. The welcome
+goes out as the banner's caption (Telegram allows 1024 characters there), or as plain text when
+the banner is off.
 """
 
 from __future__ import annotations
 
 WELCOME: dict[str, str] = {
     "en": (
-        "🛍 <b>@{bot} is now part of {store}</b>\n\n"
-        "Premium accounts, subscriptions and digital products, delivered automatically.\n"
-        "Tap below to open the store."
+        "🚀 <b>Welcome!</b>\n\n"
+        "Looking for premium accounts, subscriptions and digital products?\n"
+        "Find everything in one place.\n\n"
+        "📦 Digital products\n"
+        "⚡ Automatic delivery\n"
+        "🛡 Secure payment\n\n"
+        "👇 @{bot} is now part of {store}. Open our main store:"
     ),
     "bn": (
-        "🛍 <b>@{bot} এখন {store}-এর অংশ</b>\n\n"
-        "প্রিমিয়াম অ্যাকাউন্ট, সাবস্ক্রিপশন আর ডিজিটাল প্রোডাক্ট, অটো ডেলিভারি।\n"
-        "দোকান খুলতে নিচে চাপুন।"
+        "🚀 <b>স্বাগতম!</b>\n\n"
+        "প্রিমিয়াম অ্যাকাউন্ট, সাবস্ক্রিপশন বা ডিজিটাল প্রোডাক্ট খুঁজছেন?\n"
+        "সব পাবেন এক জায়গায়।\n\n"
+        "📦 ডিজিটাল প্রোডাক্ট\n"
+        "⚡ অটো ডেলিভারি\n"
+        "🛡 নিরাপদ পেমেন্ট\n\n"
+        "👇 @{bot} এখন {store}-এর অংশ। আমাদের মূল দোকান খুলুন:"
     ),
     "hi": (
-        "🛍 <b>@{bot} अब {store} का हिस्सा है</b>\n\n"
-        "प्रीमियम अकाउंट, सब्सक्रिप्शन और डिजिटल प्रोडक्ट, ऑटोमैटिक डिलीवरी।\n"
-        "स्टोर खोलने के लिए नीचे दबाएँ।"
+        "🚀 <b>स्वागत है!</b>\n\n"
+        "प्रीमियम अकाउंट, सब्सक्रिप्शन या डिजिटल प्रोडक्ट ढूँढ रहे हैं?\n"
+        "सब कुछ एक ही जगह मिलेगा।\n\n"
+        "📦 डिजिटल प्रोडक्ट\n"
+        "⚡ ऑटोमैटिक डिलीवरी\n"
+        "🛡 सुरक्षित पेमेंट\n\n"
+        "👇 @{bot} अब {store} का हिस्सा है। हमारा मुख्य स्टोर खोलें:"
     ),
     "ar": (
-        "🛍 <b>@{bot} أصبح الآن جزءًا من {store}</b>\n\n"
-        "حسابات مميزة واشتراكات ومنتجات رقمية، بتسليم تلقائي.\n"
-        "اضغط بالأسفل لفتح المتجر."
+        "🚀 <b>أهلًا بك!</b>\n\n"
+        "تبحث عن حسابات مميزة أو اشتراكات أو منتجات رقمية؟\n"
+        "ستجد كل شيء في مكان واحد.\n\n"
+        "📦 منتجات رقمية\n"
+        "⚡ تسليم تلقائي\n"
+        "🛡 دفع آمن\n\n"
+        "👇 @{bot} أصبح الآن جزءًا من {store}. افتح متجرنا الرئيسي:"
     ),
     "ru": (
-        "🛍 <b>@{bot} теперь часть {store}</b>\n\n"
-        "Премиум-аккаунты, подписки и цифровые товары с автоматической выдачей.\n"
-        "Нажмите ниже, чтобы открыть магазин."
+        "🚀 <b>Добро пожаловать!</b>\n\n"
+        "Ищете премиум-аккаунты, подписки или цифровые товары?\n"
+        "Всё в одном месте.\n\n"
+        "📦 Цифровые товары\n"
+        "⚡ Автоматическая выдача\n"
+        "🛡 Безопасная оплата\n\n"
+        "👇 @{bot} теперь часть {store}. Откройте наш основной магазин:"
     ),
     "uk": (
-        "🛍 <b>@{bot} тепер частина {store}</b>\n\n"
-        "Преміум-акаунти, підписки та цифрові товари з автоматичною видачею.\n"
-        "Натисніть нижче, щоб відкрити магазин."
+        "🚀 <b>Ласкаво просимо!</b>\n\n"
+        "Шукаєте преміум-акаунти, підписки чи цифрові товари?\n"
+        "Усе в одному місці.\n\n"
+        "📦 Цифрові товари\n"
+        "⚡ Автоматична видача\n"
+        "🛡 Безпечна оплата\n\n"
+        "👇 @{bot} тепер частина {store}. Відкрийте наш основний магазин:"
     ),
     "kk": (
-        "🛍 <b>@{bot} енді {store} дүкенінің бөлігі</b>\n\n"
-        "Премиум аккаунттар, жазылымдар және цифрлық тауарлар, автоматты жеткізу.\n"
-        "Дүкенді ашу үшін төмендегіні басыңыз."
+        "🚀 <b>Қош келдіңіз!</b>\n\n"
+        "Премиум аккаунттар, жазылымдар немесе цифрлық тауарлар іздеп жүрсіз бе?\n"
+        "Бәрі бір жерде.\n\n"
+        "📦 Цифрлық тауарлар\n"
+        "⚡ Автоматты жеткізу\n"
+        "🛡 Қауіпсіз төлем\n\n"
+        "👇 @{bot} енді {store} дүкенінің бөлігі. Негізгі дүкенімізді ашыңыз:"
     ),
     "id": (
-        "🛍 <b>@{bot} sekarang bagian dari {store}</b>\n\n"
-        "Akun premium, langganan, dan produk digital, dikirim otomatis.\n"
-        "Ketuk di bawah untuk membuka toko."
+        "🚀 <b>Selamat datang!</b>\n\n"
+        "Mencari akun premium, langganan, atau produk digital?\n"
+        "Semuanya ada di satu tempat.\n\n"
+        "📦 Produk digital\n"
+        "⚡ Pengiriman otomatis\n"
+        "🛡 Pembayaran aman\n\n"
+        "👇 @{bot} sekarang bagian dari {store}. Buka toko utama kami:"
     ),
     "ms": (
-        "🛍 <b>@{bot} kini sebahagian daripada {store}</b>\n\n"
-        "Akaun premium, langganan dan produk digital, dihantar secara automatik.\n"
-        "Tekan di bawah untuk membuka kedai."
+        "🚀 <b>Selamat datang!</b>\n\n"
+        "Mencari akaun premium, langganan atau produk digital?\n"
+        "Semuanya ada di satu tempat.\n\n"
+        "📦 Produk digital\n"
+        "⚡ Penghantaran automatik\n"
+        "🛡 Pembayaran selamat\n\n"
+        "👇 @{bot} kini sebahagian daripada {store}. Buka kedai utama kami:"
     ),
     "pt": (
-        "🛍 <b>@{bot} agora faz parte da {store}</b>\n\n"
-        "Contas premium, assinaturas e produtos digitais, com entrega automática.\n"
-        "Toque abaixo para abrir a loja."
+        "🚀 <b>Bem-vindo!</b>\n\n"
+        "Procurando contas premium, assinaturas ou produtos digitais?\n"
+        "Encontre tudo num só lugar.\n\n"
+        "📦 Produtos digitais\n"
+        "⚡ Entrega automática\n"
+        "🛡 Pagamento seguro\n\n"
+        "👇 @{bot} agora faz parte da {store}. Abra nossa loja principal:"
     ),
     "fr": (
-        "🛍 <b>@{bot} fait désormais partie de {store}</b>\n\n"
-        "Comptes premium, abonnements et produits numériques, livrés automatiquement.\n"
-        "Appuyez ci-dessous pour ouvrir la boutique."
+        "🚀 <b>Bienvenue !</b>\n\n"
+        "Vous cherchez des comptes premium, des abonnements ou des produits numériques ?\n"
+        "Tout est réuni au même endroit.\n\n"
+        "📦 Produits numériques\n"
+        "⚡ Livraison automatique\n"
+        "🛡 Paiement sécurisé\n\n"
+        "👇 @{bot} fait désormais partie de {store}. Ouvrez notre boutique principale :"
     ),
     "tr": (
-        "🛍 <b>@{bot} artık {store} mağazasının bir parçası</b>\n\n"
-        "Premium hesaplar, abonelikler ve dijital ürünler, otomatik teslimat.\n"
-        "Mağazayı açmak için aşağıya dokunun."
+        "🚀 <b>Hoş geldiniz!</b>\n\n"
+        "Premium hesap, abonelik veya dijital ürün mü arıyorsunuz?\n"
+        "Hepsi tek bir yerde.\n\n"
+        "📦 Dijital ürünler\n"
+        "⚡ Otomatik teslimat\n"
+        "🛡 Güvenli ödeme\n\n"
+        "👇 @{bot} artık {store} mağazasının bir parçası. Ana mağazamızı açın:"
     ),
     "vi": (
-        "🛍 <b>@{bot} giờ là một phần của {store}</b>\n\n"
-        "Tài khoản premium, gói đăng ký và sản phẩm số, giao tự động.\n"
-        "Nhấn bên dưới để mở cửa hàng."
+        "🚀 <b>Chào mừng bạn!</b>\n\n"
+        "Bạn đang tìm tài khoản premium, gói đăng ký hay sản phẩm số?\n"
+        "Tất cả đều có ở một nơi.\n\n"
+        "📦 Sản phẩm số\n"
+        "⚡ Giao tự động\n"
+        "🛡 Thanh toán an toàn\n\n"
+        "👇 @{bot} giờ là một phần của {store}. Mở cửa hàng chính của chúng tôi:"
     ),
     "zh": (
-        "🛍 <b>@{bot} 现已并入 {store}</b>\n\n"
-        "高级账号、订阅和数字商品，自动发货。\n"
-        "点击下方打开商店。"
+        "🚀 <b>欢迎！</b>\n\n"
+        "在找高级账号、订阅或数字商品吗？\n"
+        "一站全都有。\n\n"
+        "📦 数字商品\n"
+        "⚡ 自动发货\n"
+        "🛡 安全支付\n\n"
+        "👇 @{bot} 现已并入 {store}。打开我们的主商店："
     ),
     "tl": (
-        "🛍 <b>Bahagi na ng {store} ang @{bot}</b>\n\n"
-        "Premium accounts, subscriptions at digital products, awtomatikong naide-deliver.\n"
-        "I-tap sa ibaba para buksan ang tindahan."
+        "🚀 <b>Maligayang pagdating!</b>\n\n"
+        "Naghahanap ng premium accounts, subscriptions o digital products?\n"
+        "Nandito na lahat sa iisang lugar.\n\n"
+        "📦 Digital products\n"
+        "⚡ Awtomatikong delivery\n"
+        "🛡 Ligtas na bayad\n\n"
+        "👇 Bahagi na ng {store} ang @{bot}. Buksan ang aming pangunahing tindahan:"
     ),
 }
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -11,7 +12,7 @@ from aiogram.client.session.base import BaseSession
 from aiogram.types import Update
 
 from relay import texts
-from relay.config import Config, ConfigError, parse_ids, parse_tokens
+from relay.config import BANNER, Config, ConfigError, parse_ids, parse_photo, parse_tokens
 from relay.handlers import Quiet, build_router, campaign_code, store_link
 from relay.stats import MemoryStats
 
@@ -48,7 +49,13 @@ def test_the_config_says_what_is_missing():
         Config.from_env({"BOT_TOKENS": TOKEN_A})
     config = _config()
     assert config.main_bot == "TroveShopBot" and config.tokens == (TOKEN_A, TOKEN_B)
-    assert config.set_profile and config.campaign and config.store_name == "Trove"
+    assert config.set_profile and config.campaign and config.store_name == "DigiVault"
+    assert config.welcome_photo == str(BANNER) and BANNER.is_file()
+
+
+def test_the_banner_can_be_another_picture_or_none():
+    assert parse_photo(" https://example.com/b.jpg ") == "https://example.com/b.jpg"
+    assert parse_photo("off") is None and parse_photo("") == str(BANNER)
 
 
 # --------------------------------------------------------------------- #
@@ -69,8 +76,10 @@ def test_the_campaign_code_is_the_one_the_store_makes_from_the_bots_name():
 def test_the_welcome_is_in_the_readers_language_or_english():
     assert texts.language_of("pt-BR") == "pt"
     assert texts.language_of("xx") == "en" and texts.language_of(None) == "en"
-    assert "এখন Trove-এর অংশ" in texts.welcome("bn", bot="DigitalStoreBot", store="Trove")
-    assert "is now part of Trove" in texts.welcome("de", bot="DigitalStoreBot", store="Trove")
+    assert "এখন DigiVault-এর অংশ" in texts.welcome("bn", bot="DigitalStoreBot", store="DigiVault")
+    assert "is now part of DigiVault" in texts.welcome(
+        "de", bot="DigitalStoreBot", store="DigiVault"
+    )
     #  Every language says where the button goes and has a button.
     assert set(texts.WELCOME) == set(texts.BUTTON)
     for language in texts.WELCOME:
@@ -91,9 +100,10 @@ def test_someone_writing_again_and_again_is_answered_once_a_minute():
 
 
 class Recorder(BaseSession):
-    def __init__(self) -> None:
+    def __init__(self, refuse_photos: bool = False) -> None:
         super().__init__()
         self.sent: list[dict[str, Any]] = []
+        self.refuse_photos = refuse_photos
 
     async def close(self) -> None:  # pragma: no cover
         return None
@@ -102,19 +112,29 @@ class Recorder(BaseSession):
         yield b""
 
     async def make_request(self, bot: Bot, method: Any, timeout: Any = None) -> Any:
-        name = type(method).__name__
-        if name == "SendMessage":
-            data = method.model_dump(exclude_none=True)
-            self.sent.append(data)
-            from aiogram.types import Chat, Message
+        from aiogram.exceptions import TelegramBadRequest
+        from aiogram.types import Chat, Message, PhotoSize
 
-            return Message(
-                message_id=len(self.sent),
-                date=datetime.now(),
-                chat=Chat(id=data["chat_id"], type="private"),
-                text=data["text"],
-            )
-        raise AssertionError(f"unexpected call {name}")
+        name = type(method).__name__
+        if name not in ("SendMessage", "SendPhoto"):
+            raise AssertionError(f"unexpected call {name}")
+        if name == "SendPhoto" and self.refuse_photos:
+            raise TelegramBadRequest(method, "Bad Request: wrong file identifier")
+        data = method.model_dump(exclude_none=True)
+        data["method"] = name
+        if name == "SendPhoto":
+            data["photo"] = method.photo  # the file itself, or the id sent the time before
+        self.sent.append(data)
+        extra: dict[str, Any] = {"text": data.get("text")}
+        if name == "SendPhoto":
+            size = PhotoSize(file_id="id-from-telegram", file_unique_id="u", width=1, height=1)
+            extra = {"caption": data["caption"], "photo": [size]}
+        return Message(
+            message_id=len(self.sent),
+            date=datetime.now(),
+            chat=Chat(id=data["chat_id"], type="private"),
+            **extra,
+        )
 
 
 def _update(text: str, *, user_id: int = 7, language: str = "bn", chat_type: str = "private"):
@@ -137,14 +157,24 @@ def _update(text: str, *, user_id: int = 7, language: str = "bn", chat_type: str
     )
 
 
-@pytest.fixture
-def relay():
-    session = Recorder()
+def _relay(session: Recorder | None = None, **over: Any):
+    session = session or Recorder()
     bot = Bot(TOKEN_A, session=session)
     stats = MemoryStats()
     dispatcher = Dispatcher()
-    dispatcher.include_router(build_router(_config(), stats, {bot.id: "Premium_Accounts_Bot"}))
+    dispatcher.include_router(
+        build_router(_config(**over), stats, {bot.id: "Premium_Accounts_Bot"})
+    )
     return dispatcher, bot, session, stats
+
+
+def _words(sent: dict[str, Any]) -> str:
+    return sent.get("caption") or sent["text"]
+
+
+@pytest.fixture
+def relay():
+    return _relay()
 
 
 async def test_start_gets_the_welcome_and_the_button_to_the_store(relay):
@@ -152,10 +182,14 @@ async def test_start_gets_the_welcome_and_the_button_to_the_store(relay):
     await dispatcher.feed_update(bot, _update("/start"))
 
     sent = session.sent[0]
-    assert "@Premium_Accounts_Bot এখন Trove-এর অংশ" in sent["text"]
+    assert sent["method"] == "SendPhoto" and Path(sent["photo"].path) == BANNER
+    assert (
+        "স্বাগতম" in sent["caption"]
+        and "@Premium_Accounts_Bot এখন DigiVault-এর অংশ" in sent["caption"]
+    )
     button = sent["reply_markup"]["inline_keyboard"][0][0]
     assert button["url"] == "https://t.me/TroveShopBot?start=c_premium-accounts-bot"
-    assert button["text"] == "🛍 Trove খুলুন"
+    assert button["text"] == "🛍 DigiVault খুলুন" and button["style"] == "primary"
     assert (await stats.counts(["Premium_Accounts_Bot"]))[0].people == 1
 
     #  Writing again within the minute is counted, not answered.
@@ -163,6 +197,25 @@ async def test_start_gets_the_welcome_and_the_button_to_the_store(relay):
     assert len(session.sent) == 1
     count = (await stats.counts(["Premium_Accounts_Bot"]))[0]
     assert (count.people, count.starts) == (1, 2)
+
+
+async def test_the_banner_is_uploaded_once_then_sent_by_its_id():
+    dispatcher, bot, session, _ = _relay()
+    await dispatcher.feed_update(bot, _update("/start", user_id=7))
+    await dispatcher.feed_update(bot, _update("/start", user_id=8))
+    assert session.sent[1]["photo"] == "id-from-telegram"
+
+
+async def test_without_a_banner_or_when_it_is_refused_the_words_go_as_text():
+    dispatcher, bot, session, _ = _relay(WELCOME_PHOTO="off")
+    await dispatcher.feed_update(bot, _update("/start"))
+    assert session.sent[0]["method"] == "SendMessage"
+
+    dispatcher, bot, session, _ = _relay(Recorder(refuse_photos=True))
+    await dispatcher.feed_update(bot, _update("/start", user_id=7))
+    await dispatcher.feed_update(bot, _update("/start", user_id=8))
+    assert [s["method"] for s in session.sent] == ["SendMessage", "SendMessage"]
+    assert "@Premium_Accounts_Bot" in session.sent[0]["text"]
 
 
 async def test_groups_are_left_alone(relay):
@@ -175,7 +228,7 @@ async def test_only_the_owner_sees_stats(relay):
     dispatcher, bot, session, _ = relay
     await dispatcher.feed_update(bot, _update("/start", user_id=7))
     await dispatcher.feed_update(bot, _update("/stats", user_id=8, language="en"))
-    assert "is now part of Trove" in session.sent[-1]["text"], "a stranger gets the welcome"
+    assert "is now part of DigiVault" in _words(session.sent[-1]), "a stranger gets the welcome"
 
     await dispatcher.feed_update(bot, _update("/stats", user_id=OWNER, language="en"))
     report = session.sent[-1]["text"]

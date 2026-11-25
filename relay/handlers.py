@@ -1,5 +1,9 @@
 """What a relay bot does with a message: the welcome and the button, or /stats for the owner.
 
+The welcome is the banner with the words as its caption. The banner is uploaded once per bot
+(Telegram's file ids belong to the bot that uploaded them) and sent by id after that. When a
+picture cannot be sent, the same words go out as text, so nobody is left without the button.
+
 Only private chats are answered. A person who keeps writing is answered once a minute at most,
 so the bot cannot be made to send a stream of messages.
 """
@@ -7,11 +11,14 @@ so the bot cannot be made to send a stream of messages.
 from __future__ import annotations
 
 import html
+import logging
 import re
 import time
+from pathlib import Path
 
 from aiogram import Bot, F, Router
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from relay import texts
 from relay.config import Config
@@ -21,6 +28,7 @@ from relay.stats import Stats
 #  digits and hyphens, at most 40), so a campaign named after the bot gets this bot's code.
 _NOT_CODE = re.compile(r"[^a-z0-9]+")
 QUIET_SECONDS = 60
+log = logging.getLogger("relay")
 
 
 def campaign_code(bot_username: str) -> str:
@@ -40,7 +48,7 @@ def welcome_markup(config: Config, bot_username: str, language: str | None) -> I
                 InlineKeyboardButton(
                     text=texts.button(language, store=config.store_name),
                     url=store_link(config, bot_username),
-                    style="success",
+                    style="primary",
                 )
             ]
         ]
@@ -66,10 +74,37 @@ class Quiet:
         return True
 
 
+class Banner:
+    """The picture above the welcome, and each bot's file id for it once uploaded."""
+
+    def __init__(self, source: str | None) -> None:
+        self.source = source
+        self._ids: dict[int, str] = {}
+        self._broken: set[int] = set()
+
+    def photo(self, bot_id: int) -> str | FSInputFile | None:
+        if self.source is None or bot_id in self._broken:
+            return None
+        if bot_id in self._ids:
+            return self._ids[bot_id]
+        if Path(self.source).is_file():
+            return FSInputFile(self.source, filename="banner.jpg")
+        return self.source
+
+    def sent(self, bot_id: int, message: Message) -> None:
+        if message.photo:
+            self._ids[bot_id] = message.photo[-1].file_id
+
+    def failed(self, bot_id: int) -> None:
+        """Telegram refused the picture: this bot sends text until the next start."""
+        self._broken.add(bot_id)
+
+
 def build_router(config: Config, stats: Stats, usernames: dict[int, str]) -> Router:
     """`usernames`: each relay bot's id -> its username, filled in at start."""
     router = Router(name="relay")
     quiet = Quiet()
+    banner = Banner(config.welcome_photo)
 
     @router.message(F.chat.type == "private", F.text.startswith("/stats"))
     async def show_stats(message: Message, bot: Bot) -> None:
@@ -100,9 +135,18 @@ def build_router(config: Config, stats: Stats, usernames: dict[int, str]) -> Rou
         if not quiet.allow(username, user_id):
             return
         language = message.from_user.language_code
-        await message.answer(
-            texts.welcome(language, bot=username, store=html.escape(config.store_name)),
-            reply_markup=welcome_markup(config, username, language),
-        )
+        words = texts.welcome(language, bot=username, store=html.escape(config.store_name))
+        markup = welcome_markup(config, username, language)
+        photo = banner.photo(bot.id)
+        if photo is not None:
+            try:
+                banner.sent(
+                    bot.id, await message.answer_photo(photo, caption=words, reply_markup=markup)
+                )
+                return
+            except TelegramBadRequest as exc:
+                log.warning("banner not sent by @%s: %s", username, exc.message)
+                banner.failed(bot.id)
+        await message.answer(words, reply_markup=markup)
 
     return router

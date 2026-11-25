@@ -3,10 +3,12 @@
   BOT_TOKENS     the bots' tokens from BotFather, separated by commas, spaces or new lines
   MAIN_BOT       the store's bot, the one every relay bot points to (TroveShopBot)
   OWNER_IDS      Telegram user ids allowed to send /stats, separated by commas
-  STORE_NAME     the store's name as the welcome message says it (Trove)
+  STORE_NAME     the store's name as the welcome message says it (DigiVault)
   REDIS_URL      optional: keeps the start counts across restarts; without it they live in memory
   SET_PROFILE    optional, "true" by default: write each bot's description and about text
   CAMPAIGN       optional, "true" by default: link with the bot's own campaign code (c_<slug>)
+  WELCOME_PHOTO  optional: the banner above the welcome. Empty: the store's banner in
+                 relay/assets/banner.jpg. A link (https://...) to another picture. "off": text only.
 
 Tokens are never logged: a bot is named by its username once it has answered getMe.
 """
@@ -16,10 +18,12 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 _SPLIT = re.compile(r"[\s,;]+")
 _TOKEN = re.compile(r"^\d{5,}:[A-Za-z0-9_-]{30,}$")
 _USERNAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]{3,31}$")
+BANNER = Path(__file__).parent / "assets" / "banner.jpg"
 
 
 class ConfigError(ValueError):
@@ -42,6 +46,16 @@ def parse_tokens(raw: str | None) -> list[str]:
     return seen
 
 
+def parse_photo(raw: str | None) -> str | None:
+    """The banner: the bundled file, another picture's link or file id, or None for none."""
+    value = (raw or "").strip()
+    if not value:
+        return str(BANNER)
+    if value.lower() in ("off", "false", "no", "none", "0"):
+        return None
+    return value
+
+
 def parse_ids(raw: str | None) -> frozenset[int]:
     return frozenset(int(p) for p in _SPLIT.split(raw or "") if p.strip().isdigit())
 
@@ -55,6 +69,7 @@ class Config:
     redis_url: str | None
     set_profile: bool
     campaign: bool
+    welcome_photo: str | None = str(BANNER)
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> Config:
@@ -69,8 +84,9 @@ class Config:
             tokens=tuple(tokens),
             main_bot=main_bot,
             owner_ids=parse_ids(env.get("OWNER_IDS")),
-            store_name=(env.get("STORE_NAME") or "Trove").strip()[:40] or "Trove",
+            store_name=(env.get("STORE_NAME") or "DigiVault").strip()[:40] or "DigiVault",
             redis_url=(env.get("REDIS_URL") or "").strip() or None,
             set_profile=_flag(env.get("SET_PROFILE"), True),
             campaign=_flag(env.get("CAMPAIGN"), True),
+            welcome_photo=parse_photo(env.get("WELCOME_PHOTO")),
         )
