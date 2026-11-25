@@ -1,0 +1,29 @@
+[project]
+name = "relay"
+version = "0.1.0"
+description = "Telegram bots that send whoever starts them to the store bot."
+requires-python = ">=3.12"
+dependencies = [
+  "aiogram==3.31.0",
+  "redis==5.2.1",
+]
+
+[tool.setuptools.packages.find]
+include = ["relay*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "RUF"]
+ignore = ["S101"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+# Other alphabets are the point of this file.
+"relay/texts.py" = ["RUF001"]
+# Made-up tokens, shaped like real ones.
+"tests/*" = ["S105", "S106"]
