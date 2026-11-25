@@ -45,7 +45,7 @@ async def _stats(config: Config) -> Stats:
         return MemoryStats()
     from redis.asyncio import Redis
 
-    stats = RedisStats(Redis.from_url(config.redis_url))
+    stats = RedisStats(Redis.from_url(config.redis_url, socket_timeout=2, socket_connect_timeout=2))
     await stats.load()
     return stats
 

@@ -106,6 +106,27 @@ def build_router(config: Config, stats: Stats, usernames: dict[int, str]) -> Rou
     quiet = Quiet()
     banner = Banner(config.welcome_photo)
 
+    async def count(username: str, user_id: int) -> None:
+        try:
+            await stats.record(username, user_id)
+        except Exception as exc:  # a lost count must never stop a reply
+            log.warning("start not counted: %s", type(exc).__name__)
+
+    async def send_welcome(message: Message, bot: Bot, username: str) -> None:
+        language = message.from_user.language_code if message.from_user else None
+        words = texts.welcome(language, bot=username, store=html.escape(config.store_name))
+        markup = welcome_markup(config, username, language)
+        photo = banner.photo(bot.id)
+        if photo is not None:
+            try:
+                sent = await message.answer_photo(photo, caption=words, reply_markup=markup)
+                banner.sent(bot.id, sent)
+                return
+            except TelegramBadRequest as exc:
+                log.warning("banner not sent by @%s: %s", username, exc.message)
+                banner.failed(bot.id)
+        await message.answer(words, reply_markup=markup)
+
     @router.message(F.chat.type == "private", F.text.startswith("/stats"))
     async def show_stats(message: Message, bot: Bot) -> None:
         if message.from_user is None or message.from_user.id not in config.owner_ids:
@@ -131,22 +152,9 @@ def build_router(config: Config, stats: Stats, usernames: dict[int, str]) -> Rou
             return
         username = usernames.get(bot.id) or (await bot.me()).username or ""
         user_id = message.from_user.id
-        await stats.record(username, user_id)
-        if not quiet.allow(username, user_id):
-            return
-        language = message.from_user.language_code
-        words = texts.welcome(language, bot=username, store=html.escape(config.store_name))
-        markup = welcome_markup(config, username, language)
-        photo = banner.photo(bot.id)
-        if photo is not None:
-            try:
-                banner.sent(
-                    bot.id, await message.answer_photo(photo, caption=words, reply_markup=markup)
-                )
-                return
-            except TelegramBadRequest as exc:
-                log.warning("banner not sent by @%s: %s", username, exc.message)
-                banner.failed(bot.id)
-        await message.answer(words, reply_markup=markup)
+        if quiet.allow(username, user_id):
+            #  The reply goes first; counting it never makes anyone wait.
+            await send_welcome(message, bot, username)
+        await count(username, user_id)
 
     return router
