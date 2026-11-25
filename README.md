@@ -2,7 +2,7 @@
 
 Telegram bots that send whoever starts them to the store bot.
 
-Each bot answers a `/start` (or any message, at most once a minute per person) with the store's
+Each bot answers every `/start` (other messages at most once a minute per person) with the store's
 banner and a short welcome under it in the reader's language — 15 languages — and one button
 that opens the store bot. The welcome says plainly that the bot is now part of the store; a relay
 bot never poses as anything else. Each bot links with its own campaign code, so the store's **Statistics → Campaign links**

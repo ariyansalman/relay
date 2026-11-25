@@ -4,8 +4,9 @@ The welcome is the banner with the words as its caption. The banner is uploaded 
 (Telegram's file ids belong to the bot that uploaded them) and sent by id after that. When a
 picture cannot be sent, the same words go out as text, so nobody is left without the button.
 
-Only private chats are answered. A person who keeps writing is answered once a minute at most,
-so the bot cannot be made to send a stream of messages.
+Only private chats are answered. /start is answered every time (a double tap within a few
+seconds gets one reply); anything else a person keeps writing is answered once a minute at
+most, so the bot cannot be made to send a stream of messages.
 """
 
 from __future__ import annotations
@@ -28,6 +29,8 @@ from relay.stats import Stats
 #  digits and hyphens, at most 40), so a campaign named after the bot gets this bot's code.
 _NOT_CODE = re.compile(r"[^a-z0-9]+")
 QUIET_SECONDS = 60
+#  /start is what someone presses when they want the button again: answer it, bar a double tap.
+START_QUIET_SECONDS = 3
 log = logging.getLogger("relay")
 
 
@@ -62,10 +65,12 @@ class Quiet:
         self.seconds = seconds
         self._last: dict[tuple[str, int], float] = {}
 
-    def allow(self, bot: str, user_id: int, now: float | None = None) -> bool:
+    def allow(
+        self, bot: str, user_id: int, now: float | None = None, seconds: int | None = None
+    ) -> bool:
         now = time.monotonic() if now is None else now
         key = (bot, user_id)
-        if now - self._last.get(key, -1e9) < self.seconds:
+        if now - self._last.get(key, -1e9) < (self.seconds if seconds is None else seconds):
             return False
         self._last[key] = now
         if len(self._last) > 50_000:
@@ -152,7 +157,9 @@ def build_router(config: Config, stats: Stats, usernames: dict[int, str]) -> Rou
             return
         username = usernames.get(bot.id) or (await bot.me()).username or ""
         user_id = message.from_user.id
-        if quiet.allow(username, user_id):
+        is_start = (message.text or "").startswith("/start")
+        wait = START_QUIET_SECONDS if is_start else None
+        if quiet.allow(username, user_id, seconds=wait):
             #  The reply goes first; counting it never makes anyone wait.
             await send_welcome(message, bot, username)
         await count(username, user_id)

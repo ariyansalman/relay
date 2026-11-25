@@ -92,6 +92,9 @@ def test_someone_writing_again_and_again_is_answered_once_a_minute():
     assert not quiet.allow("bot", 1, now=30)
     assert quiet.allow("bot", 2, now=30), "another person is answered"
     assert quiet.allow("bot", 1, now=61)
+    #  /start: only a double tap is held back.
+    assert not quiet.allow("bot", 1, now=62, seconds=3)
+    assert quiet.allow("bot", 1, now=65, seconds=3)
 
 
 # --------------------------------------------------------------------- #
